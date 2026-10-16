@@ -2,7 +2,12 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import * as path from "node:path";
 import { getChangedFiles, isPullRequestEvent } from "./changed-files.js";
-import { renderComment, upsertComment } from "./comment.js";
+import {
+  renderComment,
+  renderNoSolidityComment,
+  updateExistingComment,
+  upsertComment,
+} from "./comment.js";
 import { summarizeFindings } from "./findings.js";
 import { runSlither } from "./slither.js";
 import { countAtOrAbove, parseFailOn, shouldFail } from "./threshold.js";
@@ -27,10 +32,26 @@ export async function run(): Promise<void> {
   const octokit = github.getOctokit(token);
   const context = github.context;
 
+  const pullRequest = isPullRequestEvent(context) ? context.payload.pull_request : undefined;
+
   const changed = await getChangedFiles(octokit, context);
   if (!changed.all && changed.files.size === 0) {
     core.info("No Solidity files changed in this pull request. Nothing to scan.");
-    // No PR comment here, but leave a trace on the run page.
+    // Never post a new comment here, but replace an earlier report so it does not go stale.
+    if (pullRequest) {
+      try {
+        await updateExistingComment(
+          octokit,
+          context.repo,
+          pullRequest.number,
+          renderNoSolidityComment(),
+        );
+      } catch (error) {
+        core.warning(
+          `Could not update the PR comment: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
     if (process.env.GITHUB_STEP_SUMMARY) {
       await core.summary.addRaw(`${NO_SOLIDITY_SUMMARY}\n`).write();
     }
@@ -51,7 +72,6 @@ export async function run(): Promise<void> {
       `${summary.optimizationCount} optimization.`,
   );
 
-  const pullRequest = isPullRequestEvent(context) ? context.payload.pull_request : undefined;
   const body = renderComment(
     summary,
     {

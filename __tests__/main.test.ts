@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => {
     },
     getChangedFiles: vi.fn(),
     upsertComment: vi.fn(),
+    updateExistingComment: vi.fn(),
     runSlither: vi.fn(),
   };
 });
@@ -36,6 +37,8 @@ vi.mock("../src/changed-files.js", () => ({
 }));
 vi.mock("../src/comment.js", () => ({
   renderComment: vi.fn(() => "body"),
+  renderNoSolidityComment: vi.fn(() => "no-solidity body"),
+  updateExistingComment: mocks.updateExistingComment,
   upsertComment: mocks.upsertComment,
 }));
 vi.mock("../src/slither.js", () => ({ runSlither: mocks.runSlither }));
@@ -62,6 +65,7 @@ describe("run", () => {
     mocks.summary.addRaw.mockReturnValue(mocks.summary);
     mocks.summary.write.mockResolvedValue(mocks.summary);
     mocks.getChangedFiles.mockResolvedValue({ all: false, files: new Set() });
+    mocks.updateExistingComment.mockResolvedValue(false);
     vi.stubEnv("GITHUB_STEP_SUMMARY", "/tmp/summary.md");
   });
 
@@ -88,6 +92,42 @@ describe("run", () => {
 
     expect(mocks.summary.addRaw).not.toHaveBeenCalled();
     expect(mocks.upsertComment).not.toHaveBeenCalled();
+    expect(mocks.core.setFailed).not.toHaveBeenCalled();
+  });
+
+  it("replaces an existing report when the PR no longer changes Solidity files", async () => {
+    mocks.updateExistingComment.mockResolvedValue(true);
+    const { NO_SOLIDITY_SUMMARY } = await runAction();
+
+    expect(mocks.updateExistingComment).toHaveBeenCalledOnce();
+    expect(mocks.updateExistingComment).toHaveBeenCalledWith(
+      {},
+      { owner: "acme", repo: "demo" },
+      1,
+      "no-solidity body",
+    );
+    expect(mocks.upsertComment).not.toHaveBeenCalled();
+    expect(mocks.summary.addRaw).toHaveBeenCalledWith(`${NO_SOLIDITY_SUMMARY}\n`);
+    expect(mocks.core.setFailed).not.toHaveBeenCalled();
+  });
+
+  it("creates no comment when the PR has no earlier report", async () => {
+    await runAction();
+
+    // updateExistingComment found nothing (false); nothing may create a comment instead.
+    expect(mocks.updateExistingComment).toHaveBeenCalledOnce();
+    expect(mocks.upsertComment).not.toHaveBeenCalled();
+    expect(mocks.core.setFailed).not.toHaveBeenCalled();
+  });
+
+  it("keeps the job green when the comment cannot be updated", async () => {
+    mocks.updateExistingComment.mockRejectedValue(new Error("Resource not accessible"));
+    await runAction();
+
+    expect(mocks.core.warning).toHaveBeenCalledWith(
+      "Could not update the PR comment: Resource not accessible",
+    );
+    expect(mocks.summary.write).toHaveBeenCalledOnce();
     expect(mocks.core.setFailed).not.toHaveBeenCalled();
   });
 });
