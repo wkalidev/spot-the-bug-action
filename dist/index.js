@@ -29361,6 +29361,7 @@ var __webpack_exports__ = {};
 
 // EXPORTS
 __nccwpck_require__.d(__webpack_exports__, {
+  r: () => (/* binding */ NO_SOLIDITY_SUMMARY),
   e: () => (/* binding */ run)
 });
 
@@ -37585,14 +37586,19 @@ function renderComment(summary, link, options = {}) {
         lines.push(`<sub>Not shown: ${summary.informationalCount} informational, ` +
             `${summary.optimizationCount} optimization.</sub>`);
     }
-    // High and Medium stay visible; Low findings are collapsed below them.
+    // High and Medium stay visible; Low findings are collapsed below them,
+    // unless they are the only findings, in which case they are shown directly.
     const prominent = summary.reported.filter((f) => f.severity !== "Low");
     const low = summary.reported.filter((f) => f.severity === "Low");
     if (prominent.length > 0) {
         lines.push("");
         lines.push(...renderTable(prominent, link, options));
     }
-    if (low.length > 0) {
+    if (low.length > 0 && prominent.length === 0) {
+        lines.push("");
+        lines.push(...renderTable(low, link, options));
+    }
+    else if (low.length > 0) {
         const noun = low.length === 1 ? "finding" : "findings";
         lines.push("");
         lines.push("<details>");
@@ -37851,6 +37857,7 @@ function shouldFail(counts, failOn) {
 
 
 
+const NO_SOLIDITY_SUMMARY = "No Solidity files changed — nothing to scan";
 function setZeroOutputs() {
     setOutput("findings-count", 0);
     setOutput("high-count", 0);
@@ -37868,6 +37875,10 @@ async function run() {
     const changed = await getChangedFiles(octokit, context);
     if (!changed.all && changed.files.size === 0) {
         info("No Solidity files changed in this pull request. Nothing to scan.");
+        // No PR comment here, but leave a trace on the run page.
+        if (process.env.GITHUB_STEP_SUMMARY) {
+            await summary_summary.addRaw(`${NO_SOLIDITY_SUMMARY}\n`).write();
+        }
         setZeroOutputs();
         return;
     }
@@ -37909,5 +37920,6 @@ run().catch((error) => {
     setFailed(error instanceof Error ? error.message : String(error));
 });
 
+var __webpack_exports__NO_SOLIDITY_SUMMARY = __webpack_exports__.r;
 var __webpack_exports__run = __webpack_exports__.e;
-export { __webpack_exports__run as run };
+export { __webpack_exports__NO_SOLIDITY_SUMMARY as NO_SOLIDITY_SUMMARY, __webpack_exports__run as run };
