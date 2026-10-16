@@ -43,7 +43,7 @@ jobs:
   spot-the-bug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: wkalidev/spot-the-bug-action@v1
         with:
           working-directory: .
@@ -66,7 +66,7 @@ jobs:
   spot-the-bug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: foundry-rs/foundry-toolchain@v1
@@ -113,7 +113,7 @@ jobs:
   spot-the-bug:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: wkalidev/spot-the-bug-action@v1
         with:
           fail-on: high
