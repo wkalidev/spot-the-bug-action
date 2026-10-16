@@ -20,7 +20,7 @@ One sticky comment per PR, with findings grouped by severity and explained in pl
 
 ### Job summary
 
-![Spot the Bug job summary](docs/job-summary.png)
+<img src="docs/job-summary.png" alt="Spot the Bug job summary" width="60%">
 
 The same report is written to the workflow run's job summary.
 
