@@ -37857,7 +37857,7 @@ function shouldFail(counts, failOn) {
 
 
 
-const NO_SOLIDITY_SUMMARY = "No Solidity files changed — nothing to scan";
+const NO_SOLIDITY_SUMMARY = "Spot the Bug: No Solidity files changed — nothing to scan";
 function setZeroOutputs() {
     setOutput("findings-count", 0);
     setOutput("high-count", 0);
