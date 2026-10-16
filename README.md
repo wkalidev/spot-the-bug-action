@@ -125,6 +125,7 @@ jobs:
           category: slither
 ```
 
+- Code scanning is free on public repositories; private repositories need GitHub Code Security (Advanced Security).
 - `security-events: write` is required for the upload. Fork PRs get a read-only token, so the upload fails there.
 - `if: always()` uploads the results even when the job fails because of `fail-on`.
 - SARIF paths are relative to `working-directory`. Keep it at `.` so code scanning can map alerts to files.
