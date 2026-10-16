@@ -37617,16 +37617,43 @@ function renderComment(summary, link, options = {}) {
     return lines.join("\n") + "\n";
 }
 /**
- * Create the summary comment on the pull request, or update the existing one
- * that carries the hidden marker.
+ * Replaces an earlier report once the pull request no longer touches Solidity,
+ * so the PR does not keep showing findings for code it no longer changes.
  */
-async function upsertComment(octokit, repo, issueNumber, body) {
+function renderNoSolidityComment() {
+    return ([
+        COMMENT_MARKER,
+        "## ✅ Spot the Bug — no Solidity files changed in this PR anymore",
+        "",
+        FOOTER,
+    ].join("\n") + "\n");
+}
+async function findComment(octokit, repo, issueNumber) {
     const comments = await octokit.paginate(octokit.rest.issues.listComments, {
         ...repo,
         issue_number: issueNumber,
         per_page: 100,
     });
-    const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER));
+    return comments.find((c) => c.body?.includes(COMMENT_MARKER));
+}
+/**
+ * Update the comment that carries the hidden marker, if there is one. Never
+ * creates a comment. Returns whether a comment was updated.
+ */
+async function updateExistingComment(octokit, repo, issueNumber, body) {
+    const existing = await findComment(octokit, repo, issueNumber);
+    if (!existing)
+        return false;
+    await octokit.rest.issues.updateComment({ ...repo, comment_id: existing.id, body });
+    info(`Updated summary comment ${existing.html_url}`);
+    return true;
+}
+/**
+ * Create the summary comment on the pull request, or update the existing one
+ * that carries the hidden marker.
+ */
+async function upsertComment(octokit, repo, issueNumber, body) {
+    const existing = await findComment(octokit, repo, issueNumber);
     if (existing) {
         await octokit.rest.issues.updateComment({ ...repo, comment_id: existing.id, body });
         info(`Updated summary comment ${existing.html_url}`);
@@ -37872,10 +37899,19 @@ async function run() {
     const workingDirectory = external_node_path_namespaceObject.resolve(repoRoot, workingDirectoryInput);
     const octokit = getOctokit(token);
     const context = github_context;
+    const pullRequest = isPullRequestEvent(context) ? context.payload.pull_request : undefined;
     const changed = await getChangedFiles(octokit, context);
     if (!changed.all && changed.files.size === 0) {
         info("No Solidity files changed in this pull request. Nothing to scan.");
-        // No PR comment here, but leave a trace on the run page.
+        // Never post a new comment here, but replace an earlier report so it does not go stale.
+        if (pullRequest) {
+            try {
+                await updateExistingComment(octokit, context.repo, pullRequest.number, renderNoSolidityComment());
+            }
+            catch (error) {
+                warning(`Could not update the PR comment: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
         if (process.env.GITHUB_STEP_SUMMARY) {
             await summary_summary.addRaw(`${NO_SOLIDITY_SUMMARY}\n`).write();
         }
@@ -37891,7 +37927,6 @@ async function run() {
     info(`Findings in scope: ${summary.counts.High} high, ${summary.counts.Medium} medium, ` +
         `${summary.counts.Low} low, ${summary.informationalCount} informational, ` +
         `${summary.optimizationCount} optimization.`);
-    const pullRequest = isPullRequestEvent(context) ? context.payload.pull_request : undefined;
     const body = renderComment(summary, {
         serverUrl: context.serverUrl,
         ...context.repo,
