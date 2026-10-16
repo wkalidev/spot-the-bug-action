@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   COMMENT_MARKER,
   MAX_RAW_LENGTH,
@@ -6,7 +6,10 @@ import {
   blobUrl,
   renderComment,
   renderIssue,
+  renderNoSolidityComment,
   renderRawOutput,
+  updateExistingComment,
+  upsertComment,
 } from "../src/comment.js";
 import { summarizeFindings, type Finding, type FindingsSummary } from "../src/findings.js";
 import { ALL_FILES, PATH_CONTEXT, changedFiles, loadFixture, loadReport } from "./helpers.js";
@@ -247,5 +250,57 @@ describe("blobUrl", () => {
     expect(blobUrl("src/My Contract.sol", 0, LINK)).toBe(
       "https://github.com/acme/demo/blob/abc123/src/My%20Contract.sol",
     );
+  });
+});
+
+describe("renderNoSolidityComment", () => {
+  it("is a short marked comment with the footer", () => {
+    const body = renderNoSolidityComment();
+    expect(body.startsWith(COMMENT_MARKER)).toBe(true);
+    expect(body).toContain("## ✅ Spot the Bug — no Solidity files changed in this PR anymore");
+    expect(body).toContain("<sub>Scanned by [Spot the Bug]");
+    expect(body).not.toContain("| Severity |");
+  });
+});
+
+function fakeOctokit(comments: { id: number; body?: string; html_url: string }[]) {
+  const updateComment = vi.fn().mockResolvedValue({});
+  const createComment = vi.fn().mockResolvedValue({ data: { html_url: "https://x/new" } });
+  const octokit = {
+    paginate: vi.fn().mockResolvedValue(comments),
+    rest: { issues: { listComments: vi.fn(), updateComment, createComment } },
+  } as unknown as Parameters<typeof updateExistingComment>[0];
+  return { octokit, updateComment, createComment };
+}
+
+const REPO = { owner: "acme", repo: "demo" };
+
+describe("updateExistingComment", () => {
+  it("updates the comment that carries the marker", async () => {
+    const { octokit, updateComment, createComment } = fakeOctokit([
+      { id: 1, body: "unrelated", html_url: "https://x/1" },
+      { id: 2, body: `${COMMENT_MARKER}\nold report`, html_url: "https://x/2" },
+    ]);
+    await expect(updateExistingComment(octokit, REPO, 7, "new body")).resolves.toBe(true);
+    expect(updateComment).toHaveBeenCalledWith({ ...REPO, comment_id: 2, body: "new body" });
+    expect(createComment).not.toHaveBeenCalled();
+  });
+
+  it("creates nothing when there is no marked comment", async () => {
+    const { octokit, updateComment, createComment } = fakeOctokit([
+      { id: 1, body: "unrelated", html_url: "https://x/1" },
+    ]);
+    await expect(updateExistingComment(octokit, REPO, 7, "new body")).resolves.toBe(false);
+    expect(updateComment).not.toHaveBeenCalled();
+    expect(createComment).not.toHaveBeenCalled();
+  });
+});
+
+describe("upsertComment", () => {
+  it("creates the comment when there is no marked comment", async () => {
+    const { octokit, updateComment, createComment } = fakeOctokit([]);
+    await upsertComment(octokit, REPO, 7, "body");
+    expect(createComment).toHaveBeenCalledWith({ ...REPO, issue_number: 7, body: "body" });
+    expect(updateComment).not.toHaveBeenCalled();
   });
 });

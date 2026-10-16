@@ -180,6 +180,51 @@ export function renderComment(
 }
 
 /**
+ * Replaces an earlier report once the pull request no longer touches Solidity,
+ * so the PR does not keep showing findings for code it no longer changes.
+ */
+export function renderNoSolidityComment(): string {
+  return (
+    [
+      COMMENT_MARKER,
+      "## ✅ Spot the Bug — no Solidity files changed in this PR anymore",
+      "",
+      FOOTER,
+    ].join("\n") + "\n"
+  );
+}
+
+async function findComment(
+  octokit: Octokit,
+  repo: { owner: string; repo: string },
+  issueNumber: number,
+) {
+  const comments = await octokit.paginate(octokit.rest.issues.listComments, {
+    ...repo,
+    issue_number: issueNumber,
+    per_page: 100,
+  });
+  return comments.find((c) => c.body?.includes(COMMENT_MARKER));
+}
+
+/**
+ * Update the comment that carries the hidden marker, if there is one. Never
+ * creates a comment. Returns whether a comment was updated.
+ */
+export async function updateExistingComment(
+  octokit: Octokit,
+  repo: { owner: string; repo: string },
+  issueNumber: number,
+  body: string,
+): Promise<boolean> {
+  const existing = await findComment(octokit, repo, issueNumber);
+  if (!existing) return false;
+  await octokit.rest.issues.updateComment({ ...repo, comment_id: existing.id, body });
+  core.info(`Updated summary comment ${existing.html_url}`);
+  return true;
+}
+
+/**
  * Create the summary comment on the pull request, or update the existing one
  * that carries the hidden marker.
  */
@@ -189,12 +234,7 @@ export async function upsertComment(
   issueNumber: number,
   body: string,
 ): Promise<void> {
-  const comments = await octokit.paginate(octokit.rest.issues.listComments, {
-    ...repo,
-    issue_number: issueNumber,
-    per_page: 100,
-  });
-  const existing = comments.find((c) => c.body?.includes(COMMENT_MARKER));
+  const existing = await findComment(octokit, repo, issueNumber);
 
   if (existing) {
     await octokit.rest.issues.updateComment({ ...repo, comment_id: existing.id, body });
