@@ -16,7 +16,7 @@ Catch Solidity vulnerabilities in every pull request — before they reach mainn
 
 One sticky comment per PR, with findings grouped by severity and explained in plain English.
 
-👉 See it live on a real PR: https://github.com/wkalidev/spot-the-bug-demo/pull/1
+👉 See it live on a real PR: https://github.com/wkalidev/spot-the-bug-demo/pull/1 — and a clean one: [wkalidev/spot-the-bug-demo#3](https://github.com/wkalidev/spot-the-bug-demo/pull/3)
 
 ### Job summary
 
