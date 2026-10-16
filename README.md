@@ -117,17 +117,18 @@ jobs:
       - uses: wkalidev/spot-the-bug-action@v1
         with:
           fail-on: high
-          slither-args: --sarif ${{ runner.temp }}/slither.sarif
+          slither-args: --sarif ${{ github.workspace }}/slither.sarif
       - uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('slither.sarif') != ''
         with:
-          sarif_file: ${{ runner.temp }}/slither.sarif
+          sarif_file: slither.sarif
           category: slither
 ```
 
 - Code scanning is free on public repositories; private repositories need GitHub Code Security (Advanced Security).
 - `security-events: write` is required for the upload. Fork PRs get a read-only token, so the upload fails there.
-- `if: always()` uploads the results even when the job fails because of `fail-on`.
+- `always()` uploads the results even when the job fails because of `fail-on`. The `hashFiles` check skips the upload when no SARIF file was written — Slither could not compile the project, or no Solidity file changed in the PR.
+- Write the SARIF file inside the workspace: `hashFiles` only sees files under `github.workspace`, so a file in `runner.temp` would always skip the upload.
 - SARIF paths are relative to `working-directory`. Keep it at `.` so code scanning can map alerts to files.
 
 How SARIF results relate to the PR comment:
