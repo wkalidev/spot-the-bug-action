@@ -7,7 +7,7 @@ import { summarizeFindings } from "./findings.js";
 import { runSlither } from "./slither.js";
 import { countAtOrAbove, parseFailOn, shouldFail } from "./threshold.js";
 
-export const NO_SOLIDITY_SUMMARY = "No Solidity files changed — nothing to scan";
+export const NO_SOLIDITY_SUMMARY = "Spot the Bug: No Solidity files changed — nothing to scan";
 
 function setZeroOutputs(): void {
   core.setOutput("findings-count", 0);

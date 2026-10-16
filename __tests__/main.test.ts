@@ -72,7 +72,7 @@ describe("run", () => {
   it("writes a one-line job summary and no comment when no Solidity file changed", async () => {
     const { NO_SOLIDITY_SUMMARY } = await runAction();
 
-    expect(NO_SOLIDITY_SUMMARY).toBe("No Solidity files changed — nothing to scan");
+    expect(NO_SOLIDITY_SUMMARY).toBe("Spot the Bug: No Solidity files changed — nothing to scan");
     expect(mocks.summary.addRaw).toHaveBeenCalledOnce();
     expect(mocks.summary.addRaw).toHaveBeenCalledWith(`${NO_SOLIDITY_SUMMARY}\n`);
     expect(mocks.summary.write).toHaveBeenCalledOnce();
