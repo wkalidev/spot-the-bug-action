@@ -8,9 +8,21 @@ Catch Solidity vulnerabilities in every pull request — before they reach mainn
 [![Latest release](https://img.shields.io/github/v/release/wkalidev/spot-the-bug-action)](https://github.com/wkalidev/spot-the-bug-action/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+## Screenshots
+
+### PR comment
+
 ![Spot the Bug comment on a pull request](docs/pr-comment.png)
 
+One sticky comment per PR, with findings grouped by severity and explained in plain English.
+
 👉 See it live on a real PR: https://github.com/wkalidev/spot-the-bug-demo/pull/1
+
+### Job summary
+
+![Spot the Bug job summary](docs/job-summary.png)
+
+The same report is written to the workflow run's job summary.
 
 ## Why Spot the Bug
 
