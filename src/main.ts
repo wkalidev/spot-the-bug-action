@@ -7,6 +7,8 @@ import { summarizeFindings } from "./findings.js";
 import { runSlither } from "./slither.js";
 import { countAtOrAbove, parseFailOn, shouldFail } from "./threshold.js";
 
+export const NO_SOLIDITY_SUMMARY = "No Solidity files changed — nothing to scan";
+
 function setZeroOutputs(): void {
   core.setOutput("findings-count", 0);
   core.setOutput("high-count", 0);
@@ -28,6 +30,10 @@ export async function run(): Promise<void> {
   const changed = await getChangedFiles(octokit, context);
   if (!changed.all && changed.files.size === 0) {
     core.info("No Solidity files changed in this pull request. Nothing to scan.");
+    // No PR comment here, but leave a trace on the run page.
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await core.summary.addRaw(`${NO_SOLIDITY_SUMMARY}\n`).write();
+    }
     setZeroOutputs();
     return;
   }
