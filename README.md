@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.png" alt="Spot the Bug Action" width="100%"></p>
+
 # Spot the Bug
 
 Catch Solidity vulnerabilities in every pull request — before they reach mainnet.
