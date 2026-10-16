@@ -147,7 +147,8 @@ export function renderComment(
     );
   }
 
-  // High and Medium stay visible; Low findings are collapsed below them.
+  // High and Medium stay visible; Low findings are collapsed below them,
+  // unless they are the only findings, in which case they are shown directly.
   const prominent = summary.reported.filter((f) => f.severity !== "Low");
   const low = summary.reported.filter((f) => f.severity === "Low");
 
@@ -155,7 +156,10 @@ export function renderComment(
     lines.push("");
     lines.push(...renderTable(prominent, link, options));
   }
-  if (low.length > 0) {
+  if (low.length > 0 && prominent.length === 0) {
+    lines.push("");
+    lines.push(...renderTable(low, link, options));
+  } else if (low.length > 0) {
     const noun = low.length === 1 ? "finding" : "findings";
     lines.push("");
     lines.push("<details>");

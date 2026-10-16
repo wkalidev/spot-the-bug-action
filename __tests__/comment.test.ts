@@ -107,7 +107,7 @@ describe("renderComment", () => {
     expect(body.indexOf("</details>")).toBeGreaterThan(body.lastIndexOf("| 🟡 Low"));
   });
 
-  it("renders only the collapsed table when all findings are low", () => {
+  it("shows the low table expanded when all findings are low", () => {
     const summary = summarizeFindings(
       loadFixture(),
       changedFiles("src/vulns/ArbitrarySend.sol"),
@@ -116,7 +116,12 @@ describe("renderComment", () => {
     const lowOnly = { ...summary, reported: summary.reported.filter((f) => f.severity === "Low") };
     const body = renderComment(lowOnly, LINK);
     expect(body.split("| Severity | Issue | Location |")).toHaveLength(2);
-    expect(body.indexOf("<details>")).toBeLessThan(body.indexOf("| Severity |"));
+    expect(body).toContain("| 🟡 Low");
+    expect(body).not.toContain("low-severity");
+    // The only <details> left is the raw Slither output, after the table.
+    expect(body.split("<details>")).toHaveLength(2);
+    expect(body.indexOf("<details>")).toBeGreaterThan(body.lastIndexOf("| 🟡 Low"));
+    expect(body.indexOf("<summary>Raw Slither output</summary>")).toBeGreaterThan(0);
   });
 
   it("escapes pipes and newlines in descriptions", () => {
