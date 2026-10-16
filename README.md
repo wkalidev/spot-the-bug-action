@@ -99,6 +99,43 @@ jobs:
 | `findings-count` | Number of High, Medium and Low findings in changed files. |
 | `high-count`     | Number of High findings in changed files.                 |
 
+## Upload results to GitHub code scanning
+
+Slither can also write its results as SARIF in the same run. Pass `--sarif` through `slither-args`, then upload the file with `github/codeql-action/upload-sarif`:
+
+```yaml
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+jobs:
+  spot-the-bug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: wkalidev/spot-the-bug-action@v1
+        with:
+          fail-on: high
+          slither-args: --sarif ${{ runner.temp }}/slither.sarif
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: ${{ runner.temp }}/slither.sarif
+          category: slither
+```
+
+- `security-events: write` is required for the upload. Fork PRs get a read-only token, so the upload fails there.
+- `if: always()` uploads the results even when the job fails because of `fail-on`.
+- SARIF paths are relative to `working-directory`. Keep it at `.` so code scanning can map alerts to files.
+
+How SARIF results relate to the PR comment:
+
+- **PR comment and job summary** — only findings in changed `.sol` files, explained in plain English, refreshed on every push.
+- **Code scanning** — every finding Slither reports for the whole project, including informational and optimization, tracked as alerts under the Security tab. On pull requests, code scanning only annotates alerts on the changed lines.
+
+Both come from the same Slither run, so findings in changed files match.
+
 ## Roadmap
 
 Custom rules inspired by real hacks from the Spot the Bug video series:
